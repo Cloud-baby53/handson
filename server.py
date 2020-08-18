@@ -4,10 +4,12 @@ import concurrent.futures
 import time
 import queue
 from flask import Flask, request
+import boto3
 
 # Databaseの設定を読み込む
 config = configparser.ConfigParser()
-config.read('config.ini')
+# config.read('config.ini')
+config.read('/handson/config.ini')
 
 app = Flask(__name__)
 # FlaskのLogを非表示にする
@@ -20,6 +22,7 @@ executor = concurrent.futures.ThreadPoolExecutor(max_workers=80)
 @app.route('/')
 def index():
     html = '''
+    <code style="white-space: pre-wrap;">
                 worldskills Shanghai2021                                                                    
                                                                                 
                       ::                                :-                      
@@ -43,6 +46,7 @@ def index():
                       .:-=+:                          -+*+=:                    
                                                                                 
               Neng Neng                                  Qiao Qiao
+    </code>
     '''
     return html
     
@@ -60,13 +64,14 @@ def PutTime():
 
 # サイズ１のキューを利用し、データベースへの照合を順次実行する
 def Collation(name):
+    global dbendpoint
     name = "'" + name + "'"
     
     # 接続する
     conn = MySQLdb.connect(
     user=config['Database']['user'],
     passwd=config['Database']['passwd'],
-    host=config['Database']['host'],
+    host=dbendpoint,
     db=config['Database']['db'])
     # カーソルを取得する
     cur = conn.cursor()
@@ -126,13 +131,16 @@ def order():
     else:
         return "none"
 
-def init():
-    print("init")
-    
+
 if __name__ == '__main__':
-    init()
+    
+    client = boto3.client('rds')
+    response = client.describe_db_instances(
+        DBInstanceIdentifier=config['Database']['dbidentifier'],
+        )
+    dbendpoint = response['DBInstances'][0]['Endpoint']['Address']
     
     # CreateVirtualClient()
     time_q = queue.Queue(maxsize=80)
     result_q = queue.Queue(maxsize=1)
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=80)
