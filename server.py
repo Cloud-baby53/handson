@@ -4,6 +4,7 @@ import concurrent.futures
 import time
 import queue
 from flask import Flask, request
+import boto3
 from ec2_metadata import ec2_metadata
 
 # Databaseの設定を読み込む
@@ -23,7 +24,7 @@ executor = concurrent.futures.ThreadPoolExecutor(max_workers=80)
 def index():
     html = '''
     <code style="white-space: pre-wrap;">
-    worldskills Shanghai2021                                                                    
+                worldskills Shanghai2021                                                                    
                                                                                 
                       ::                                :-                      
                     .:=-.                               .:-:                    
@@ -67,13 +68,14 @@ def PutTime():
 
 # サイズ１のキューを利用し、データベースへの照合を順次実行する
 def Collation(name):
+    global dbendpoint
     name = "'" + name + "'"
     
     # 接続する
     conn = MySQLdb.connect(
     user=config['Database']['user'],
     passwd=config['Database']['passwd'],
-    host=config['Database']['host'],
+    host=dbendpoint,
     db=config['Database']['db'])
     # カーソルを取得する
     cur = conn.cursor()
@@ -98,11 +100,11 @@ def Collation(name):
             if name[1:-1] in row:
                 print("[Info]", name, "Found, Cache hit")
                 sql = "UPDATE Unicorn SET hits = hits + 1 WHERE name LIKE " + name;
+                
                 # 実行結果を取得する
                 cur.execute(sql)
                 # 実行結果をコミット
                 conn.commit()
-    
     
     sql = "SELECT * FROM Unicorn"
     cur.execute(sql)
@@ -137,11 +139,14 @@ def order():
     else:
         return "none"
 
-def init():
-    print("init")
-    
+
 if __name__ == '__main__':
-    init()
+    
+    client = boto3.client('rds')
+    response = client.describe_db_instances(
+        DBInstanceIdentifier=config['Database']['dbidentifier'],
+        )
+    dbendpoint = response['DBInstances'][0]['Endpoint']['Address']
     
     # CreateVirtualClient()
     time_q = queue.Queue(maxsize=80)
