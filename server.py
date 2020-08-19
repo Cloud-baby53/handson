@@ -4,7 +4,7 @@ import concurrent.futures
 import time
 import queue
 from flask import Flask, request
-import boto3
+from ec2_metadata import ec2_metadata
 
 # Databaseの設定を読み込む
 config = configparser.ConfigParser()
@@ -23,7 +23,7 @@ executor = concurrent.futures.ThreadPoolExecutor(max_workers=80)
 def index():
     html = '''
     <code style="white-space: pre-wrap;">
-                worldskills Shanghai2021                                                                    
+    worldskills Shanghai2021                                                                    
                                                                                 
                       ::                                :-                      
                     .:=-.                               .:-:                    
@@ -46,6 +46,9 @@ def index():
                       .:-=+:                          -+*+=:                    
                                                                                 
               Neng Neng                                  Qiao Qiao
+              
+    availability_zone: ''' + ec2_metadata.availability_zone + '''
+    instance_id: ''' + ec2_metadata.instance_id + '''
     </code>
     '''
     return html
@@ -64,14 +67,13 @@ def PutTime():
 
 # サイズ１のキューを利用し、データベースへの照合を順次実行する
 def Collation(name):
-    global dbendpoint
     name = "'" + name + "'"
     
     # 接続する
     conn = MySQLdb.connect(
     user=config['Database']['user'],
     passwd=config['Database']['passwd'],
-    host=dbendpoint,
+    host=config['Database']['host'],
     db=config['Database']['db'])
     # カーソルを取得する
     cur = conn.cursor()
@@ -131,14 +133,11 @@ def order():
     else:
         return "none"
 
-
-if __name__ == '__main__':
+def init():
+    print("init")
     
-    client = boto3.client('rds')
-    response = client.describe_db_instances(
-        DBInstanceIdentifier=config['Database']['dbidentifier'],
-        )
-    dbendpoint = response['DBInstances'][0]['Endpoint']['Address']
+if __name__ == '__main__':
+    init()
     
     # CreateVirtualClient()
     time_q = queue.Queue(maxsize=80)

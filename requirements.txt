@@ -1,3 +1,4 @@
 mysqlclient>=2.0.1
 Flask>=1.0.4
 boto3>=1.12.14
+ec2-metadata>=2.2.0
