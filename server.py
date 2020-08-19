@@ -88,17 +88,21 @@ def Collation(name):
     if len(rows) == 0:
         print("[Info]", name, "Not Found, Cache missing")
         sql = "INSERT INTO Unicorn (name, hits) VALUES (" + name + ", 0)"
+        # 実行結果を取得する
+        cur.execute(sql)
+        # 実行結果をコミット
+        conn.commit()
         time.sleep(5)
     else:
         for row in rows:
             if name[1:-1] in row:
                 print("[Info]", name, "Found, Cache hit")
                 sql = "UPDATE Unicorn SET hits = hits + 1 WHERE name LIKE " + name;
-                
-    # 実行結果を取得する
-    cur.execute(sql)
-    # 実行結果をコミット
-    conn.commit()
+                # 実行結果を取得する
+                cur.execute(sql)
+                # 実行結果をコミット
+                conn.commit()
+    
     
     sql = "SELECT * FROM Unicorn"
     cur.execute(sql)
